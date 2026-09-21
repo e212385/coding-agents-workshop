@@ -12,6 +12,7 @@ BLOCK-LEVEL ON ERROR UNDO, THROW.
     - If the input parameter is blank or ?, SESSION:PARAMETER is used.
     - If neither is set, the default file is sample-cobrand-koder.csv.
     - The procedure auto-detects "," versus ";" per line.
+    - Signed integer values are accepted for column C.
     - The first row is treated as header/non-data and skipped when
       column C is not an integer.
 ----------------------------------------------------------------------------*/
@@ -250,9 +251,11 @@ DO ON ERROR UNDO, THROW:
       FIND FIRST koder
            WHERE koder.kodetype = "cobrand"
              AND koder.kodenr   = iCodeNr
-           EXCLUSIVE-LOCK NO-ERROR.
+           EXCLUSIVE-LOCK NO-WAIT NO-ERROR.
 
       IF AVAILABLE koder THEN
+        lExisting = TRUE.
+      ELSE IF LOCKED koder THEN
         lExisting = TRUE.
       ELSE DO:
         CREATE koder NO-ERROR.
