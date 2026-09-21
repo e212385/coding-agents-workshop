@@ -28,6 +28,7 @@ DEFINE VARIABLE iExisting       AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iCreated        AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iHeaderSkipped  AS INTEGER   NO-UNDO.
 DEFINE VARIABLE lCreated        AS LOGICAL   NO-UNDO.
+DEFINE VARIABLE lExisting       AS LOGICAL   NO-UNDO.
 
 FUNCTION fCleanField RETURNS CHARACTER
   ( INPUT pcValue AS CHARACTER ):
@@ -180,7 +181,7 @@ PUT UNFORMATTED SUBSTITUTE("Reading cobrand import file: &1", cFile) SKIP.
 DO ON ERROR UNDO, THROW:
   INPUT FROM VALUE(cFile).
 
-  REPEAT:
+  REPEAT ON ENDKEY UNDO, LEAVE:
     IMPORT UNFORMATTED cLine.
 
     iLinesRead = iLinesRead + 1.
@@ -221,33 +222,47 @@ DO ON ERROR UNDO, THROW:
       NEXT.
     END.
 
-    FIND FIRST koder
-         WHERE koder.kodetype = "cobrand"
-           AND koder.kodenr   = iCodeNr
-         NO-LOCK NO-ERROR.
-
-    IF AVAILABLE koder THEN DO:
-      iExisting = iExisting + 1.
-      NEXT.
-    END.
-
-    ASSIGN lCreated = FALSE.
+    ASSIGN
+      lCreated  = FALSE
+      lExisting = FALSE.
 
     DO TRANSACTION:
-      CREATE koder NO-ERROR.
+      FIND FIRST koder
+           WHERE koder.kodetype = "cobrand"
+             AND koder.kodenr   = iCodeNr
+           EXCLUSIVE-LOCK NO-ERROR.
 
-      IF NOT ERROR-STATUS:ERROR THEN DO:
-        ASSIGN
-          koder.kodetype = "cobrand"
-          koder.kodenr   = iCodeNr
-          NO-ERROR.
+      IF AVAILABLE koder THEN
+        lExisting = TRUE.
+      ELSE DO:
+        CREATE koder NO-ERROR.
 
-        IF NOT ERROR-STATUS:ERROR THEN
-          lCreated = TRUE.
+        IF NOT ERROR-STATUS:ERROR THEN DO:
+          ASSIGN
+            koder.kodetype = "cobrand"
+            koder.kodenr   = iCodeNr
+            NO-ERROR.
+
+          IF NOT ERROR-STATUS:ERROR THEN
+            lCreated = TRUE.
+        END.
       END.
     END.
 
-    IF lCreated THEN DO:
+    IF NOT lCreated
+    AND NOT lExisting THEN DO:
+      FIND FIRST koder
+           WHERE koder.kodetype = "cobrand"
+             AND koder.kodenr   = iCodeNr
+           NO-LOCK NO-ERROR.
+
+      IF AVAILABLE koder THEN
+        lExisting = TRUE.
+    END.
+
+    IF lExisting THEN
+      iExisting = iExisting + 1.
+    ELSE IF lCreated THEN DO:
       iCreated = iCreated + 1.
       PUT UNFORMATTED SUBSTITUTE("Created cobrand koder &1.", iCodeNr) SKIP.
     END.
