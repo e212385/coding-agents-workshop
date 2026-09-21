@@ -256,7 +256,7 @@ DO ON ERROR UNDO, THROW:
       IF AVAILABLE koder THEN
         lExisting = TRUE.
       ELSE IF LOCKED koder THEN
-        lExisting = TRUE.
+        lNeedsRecheck = TRUE.
       ELSE DO:
         CREATE koder NO-ERROR.
 
