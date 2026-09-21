@@ -253,8 +253,16 @@ DO ON ERROR UNDO, THROW:
       ELSE DO:
         CREATE koder NO-ERROR.
 
-        IF ERROR-STATUS:ERROR THEN
+        IF ERROR-STATUS:ERROR THEN DO:
           lNeedsRecheck = TRUE.
+          FIND FIRST koder
+               WHERE koder.kodetype = "cobrand"
+                 AND koder.kodenr   = iCodeNr
+               NO-LOCK NO-ERROR.
+
+          IF AVAILABLE koder THEN
+            lExisting = TRUE.
+        END.
         ELSE DO:
           lCreateStarted = TRUE.
 
@@ -269,6 +277,14 @@ DO ON ERROR UNDO, THROW:
             AND AVAILABLE koder THEN
               DELETE koder NO-ERROR.
 
+            FIND FIRST koder
+                 WHERE koder.kodetype = "cobrand"
+                   AND koder.kodenr   = iCodeNr
+                 NO-LOCK NO-ERROR.
+
+            IF AVAILABLE koder THEN
+              lExisting = TRUE.
+
             LEAVE.
           END.
 
@@ -279,6 +295,14 @@ DO ON ERROR UNDO, THROW:
             IF lCreateStarted
             AND AVAILABLE koder THEN
               DELETE koder NO-ERROR.
+
+            FIND FIRST koder
+                 WHERE koder.kodetype = "cobrand"
+                   AND koder.kodenr   = iCodeNr
+                 NO-LOCK NO-ERROR.
+
+            IF AVAILABLE koder THEN
+              lExisting = TRUE.
 
             LEAVE.
           END.
