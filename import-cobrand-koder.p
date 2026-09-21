@@ -18,8 +18,6 @@ BLOCK-LEVEL ON ERROR UNDO, THROW.
 
 DEFINE INPUT PARAMETER pcFile AS CHARACTER NO-UNDO.
 
-DEFINE BUFFER bLockKoder FOR koder.
-
 DEFINE VARIABLE cFile           AS CHARACTER NO-UNDO.
 DEFINE VARIABLE cLine           AS CHARACTER NO-UNDO.
 DEFINE VARIABLE cCodeValue      AS CHARACTER NO-UNDO.
@@ -238,8 +236,6 @@ DO ON ERROR UNDO, THROW:
       lNeedsRecheck  = FALSE.
 
     DO TRANSACTION:
-      FIND FIRST bLockKoder EXCLUSIVE-LOCK NO-ERROR.
-
       FIND FIRST koder
            WHERE koder.kodetype = "cobrand"
              AND koder.kodenr   = iCodeNr
