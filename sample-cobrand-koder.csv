@@ -1,0 +1,7 @@
+Brand;Description;CobrandCode;Notes
+Alpha;Valid row;1001;created if missing
+Beta;Valid row;"1002";quoted integer
+Gamma;Invalid row;ABC;should be skipped
+Delta;Valid row;+1003;leading plus sign
+Epsilon;Invalid row;;missing column C
+Zeta;Valid row;-1004;leading minus sign

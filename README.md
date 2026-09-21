@@ -196,6 +196,29 @@ pytest sample-project/tests_app.py -v
 
 ---
 
+## Additional Utility: Progress OpenEdge Cobrand Import
+
+This repository also includes a standalone Progress OpenEdge procedure,
+`import-cobrand-koder.p`, for importing `cobrand` codes into the `koder` table
+from an Excel-exported CSV.
+
+- Expected source data: column C contains the cobrand code to import
+- Accepted code format: integer values, including optional leading `+` or `-`
+- Supported delimiters: `,` and `;` (auto-detected per line)
+- Header handling: the first row is treated as header/non-data and skipped
+  when column C is not an integer
+- Example invocation:
+
+```abl
+RUN import-cobrand-koder.p (INPUT "C:\temp\cobrands.csv").
+```
+
+If the input parameter is blank, the procedure falls back to `SESSION:PARAMETER`
+and then to `sample-cobrand-koder.csv` in the repository root. A small sample
+file is included for manual testing.
+
+---
+
 ## Why This Project?
 
 TaskAPI is **intentionally imperfect**. It has:
