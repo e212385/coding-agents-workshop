@@ -298,7 +298,6 @@ DO ON ERROR UNDO, THROW:
     END.
   END.
 CATCH err AS Progress.Lang.Error:
-  PUT UNFORMATTED SUBSTITUTE("Import failed: &1", err:GetMessage(1)) SKIP.
   UNDO, THROW err.
 END CATCH.
 FINALLY:
