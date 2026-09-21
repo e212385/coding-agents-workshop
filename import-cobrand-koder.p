@@ -181,8 +181,15 @@ PUT UNFORMATTED SUBSTITUTE("Reading cobrand import file: &1", cFile) SKIP.
 DO ON ERROR UNDO, THROW:
   INPUT FROM VALUE(cFile).
 
-  REPEAT ON ENDKEY UNDO, LEAVE:
-    IMPORT UNFORMATTED cLine.
+  REPEAT:
+    IMPORT UNFORMATTED cLine NO-ERROR.
+
+    IF ERROR-STATUS:ERROR THEN DO:
+      IF ERROR-STATUS:NUM-MESSAGES > 0 THEN
+        PUT UNFORMATTED "Stopping import because a read error occurred." SKIP.
+
+      LEAVE.
+    END.
 
     iLinesRead = iLinesRead + 1.
 
@@ -242,6 +249,9 @@ DO ON ERROR UNDO, THROW:
             koder.kodetype = "cobrand"
             koder.kodenr   = iCodeNr
             NO-ERROR.
+
+          IF ERROR-STATUS:ERROR THEN
+            UNDO, LEAVE.
 
           IF NOT ERROR-STATUS:ERROR THEN
             lCreated = TRUE.
