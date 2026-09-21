@@ -229,33 +229,38 @@ DO ON ERROR UNDO, THROW:
       NEXT.
     END.
 
+    FIND FIRST koder
+         WHERE koder.kodetype = "cobrand"
+           AND koder.kodenr   = iCodeNr
+         NO-LOCK NO-ERROR.
+
+    IF AVAILABLE koder THEN DO:
+      iExisting = iExisting + 1.
+      NEXT.
+    END.
+
     ASSIGN
       lCreated  = FALSE
       lExisting = FALSE.
 
     DO TRANSACTION:
-      FIND FIRST koder
-           WHERE koder.kodetype = "cobrand"
-             AND koder.kodenr   = iCodeNr
-           EXCLUSIVE-LOCK NO-ERROR.
+      CREATE koder NO-ERROR.
 
-      IF AVAILABLE koder THEN
-        lExisting = TRUE.
-      ELSE DO:
-        CREATE koder NO-ERROR.
+      IF NOT ERROR-STATUS:ERROR THEN DO:
+        ASSIGN
+          koder.kodetype = "cobrand"
+          koder.kodenr   = iCodeNr
+          NO-ERROR.
 
-        IF NOT ERROR-STATUS:ERROR THEN DO:
-          ASSIGN
-            koder.kodetype = "cobrand"
-            koder.kodenr   = iCodeNr
-            NO-ERROR.
+        IF ERROR-STATUS:ERROR THEN
+          UNDO, LEAVE.
 
-          IF ERROR-STATUS:ERROR THEN
-            UNDO, LEAVE.
+        VALIDATE koder NO-ERROR.
 
-          IF NOT ERROR-STATUS:ERROR THEN
-            lCreated = TRUE.
-        END.
+        IF ERROR-STATUS:ERROR THEN
+          UNDO, LEAVE.
+
+        lCreated = TRUE.
       END.
     END.
 
@@ -287,6 +292,7 @@ DO ON ERROR UNDO, THROW:
   END.
 CATCH err AS Progress.Lang.Error:
   PUT UNFORMATTED SUBSTITUTE("Import failed: &1", err:GetMessage(1)) SKIP.
+  UNDO, THROW err.
 END CATCH.
 FINALLY:
   INPUT CLOSE.
