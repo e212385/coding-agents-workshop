@@ -186,12 +186,8 @@ DO ON ERROR UNDO, THROW:
   REPEAT:
     IMPORT UNFORMATTED cLine NO-ERROR.
 
-    IF ERROR-STATUS:ERROR THEN DO:
-      IF ERROR-STATUS:NUM-MESSAGES > 0 THEN
-        PUT UNFORMATTED "Stopping import because a read error occurred." SKIP.
-
+    IF ERROR-STATUS:ERROR THEN
       LEAVE.
-    END.
 
     iLinesRead = iLinesRead + 1.
 
@@ -289,8 +285,10 @@ DO ON ERROR UNDO, THROW:
         lExisting = TRUE.
     END.
 
-    IF lExisting THEN
+    IF lExisting THEN DO:
       iExisting = iExisting + 1.
+      PUT UNFORMATTED SUBSTITUTE("Cobrand koder &1 already exists.", iCodeNr) SKIP.
+    END.
     ELSE IF lCreated THEN DO:
       iCreated = iCreated + 1.
       PUT UNFORMATTED SUBSTITUTE("Created cobrand koder &1.", iCodeNr) SKIP.
