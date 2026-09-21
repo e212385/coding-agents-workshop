@@ -28,6 +28,7 @@ DEFINE VARIABLE iSkipped        AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iExisting       AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iCreated        AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iHeaderSkipped  AS INTEGER   NO-UNDO.
+DEFINE VARIABLE lIsInteger      AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lCreated        AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lExisting       AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lNeedsRecheck   AS LOGICAL   NO-UNDO.
@@ -132,25 +133,31 @@ FUNCTION fGetColumn RETURNS CHARACTER
   RETURN "".
 END FUNCTION.
 
-FUNCTION fIsInteger RETURNS LOGICAL
-  ( INPUT pcValue AS CHARACTER ):
+PROCEDURE pTryParseInteger:
+  DEFINE INPUT  PARAMETER pcValue AS CHARACTER NO-UNDO.
+  DEFINE OUTPUT PARAMETER plValid AS LOGICAL   NO-UNDO.
+  DEFINE OUTPUT PARAMETER piValue AS INTEGER   NO-UNDO.
+
   DEFINE VARIABLE cValue   AS CHARACTER NO-UNDO.
   DEFINE VARIABLE cChar    AS CHARACTER NO-UNDO.
   DEFINE VARIABLE iIndex   AS INTEGER   NO-UNDO.
   DEFINE VARIABLE iStart   AS INTEGER   NO-UNDO INITIAL 1.
-  DEFINE VARIABLE iParsed  AS INTEGER   NO-UNDO.
 
   ASSIGN cValue = fCleanField(pcValue).
 
+  ASSIGN
+    plValid = FALSE
+    piValue = 0.
+
   IF cValue = "" THEN
-    RETURN FALSE.
+    RETURN.
 
   ASSIGN cChar = SUBSTRING(cValue, 1, 1).
 
   IF cChar = "+"
   OR cChar = "-" THEN DO:
     IF LENGTH(cValue) = 1 THEN
-      RETURN FALSE.
+      RETURN.
 
     iStart = 2.
   END.
@@ -159,16 +166,16 @@ FUNCTION fIsInteger RETURNS LOGICAL
     ASSIGN cChar = SUBSTRING(cValue, iIndex, 1).
 
     IF INDEX("0123456789", cChar) = 0 THEN
-      RETURN FALSE.
+      RETURN.
   END.
 
-  ASSIGN iParsed = INTEGER(cValue) NO-ERROR.
+  ASSIGN piValue = INTEGER(cValue) NO-ERROR.
 
   IF ERROR-STATUS:ERROR THEN
-    RETURN FALSE.
+    RETURN.
 
-  RETURN TRUE.
-END FUNCTION.
+  plValid = TRUE.
+END PROCEDURE.
 
 ASSIGN cFile = TRIM(IF pcFile = ? THEN "" ELSE pcFile).
 
@@ -195,8 +202,10 @@ DO ON ERROR UNDO, THROW:
       cDelimiter = fGetDelimiter(cLine)
       cCodeValue = fCleanField(fGetColumn(cLine, cDelimiter, 3)).
 
+    RUN pTryParseInteger (INPUT cCodeValue, OUTPUT lIsInteger, OUTPUT iCodeNr).
+
     IF iLinesRead = 1
-    AND NOT fIsInteger(cCodeValue) THEN DO:
+    AND NOT lIsInteger THEN DO:
       iSkipped = iSkipped + 1.
 
       IF CAPS(cCodeValue) = "COBRANDCODE"
@@ -212,22 +221,10 @@ DO ON ERROR UNDO, THROW:
       NEXT.
     END.
 
-    IF NOT fIsInteger(cCodeValue) THEN DO:
+    IF NOT lIsInteger THEN DO:
       iSkipped = iSkipped + 1.
       PUT UNFORMATTED
         SUBSTITUTE("Skipping line &1: column C is missing or not an integer [&2].",
-                   iLinesRead,
-                   cCodeValue)
-        SKIP.
-      NEXT.
-    END.
-
-    ASSIGN iCodeNr = INTEGER(cCodeValue) NO-ERROR.
-
-    IF ERROR-STATUS:ERROR THEN DO:
-      iSkipped = iSkipped + 1.
-      PUT UNFORMATTED
-        SUBSTITUTE("Skipping line &1: failed to convert column C [&2].",
                    iLinesRead,
                    cCodeValue)
         SKIP.
