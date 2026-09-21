@@ -199,11 +199,18 @@ DO ON ERROR UNDO, THROW:
 
     IF iLinesRead = 1
     AND NOT fIsInteger(cCodeValue) THEN DO:
-      ASSIGN
-        iSkipped       = iSkipped + 1
-        iHeaderSkipped = iHeaderSkipped + 1.
+      iSkipped = iSkipped + 1.
 
-      PUT UNFORMATTED "Skipping header row." SKIP.
+      IF CAPS(cCodeValue) = "COBRANDCODE"
+      OR CAPS(cCodeValue) = "CODENR" THEN DO:
+        iHeaderSkipped = iHeaderSkipped + 1.
+        PUT UNFORMATTED "Skipping header row." SKIP.
+      END.
+      ELSE
+        PUT UNFORMATTED
+          "Skipping first row because column C is not an integer."
+          SKIP.
+
       NEXT.
     END.
 
@@ -300,7 +307,7 @@ FINALLY:
   PUT UNFORMATTED SKIP
     SUBSTITUTE("Lines read      : &1", iLinesRead) SKIP
     SUBSTITUTE("Skipped         : &1", iSkipped) SKIP
-    SUBSTITUTE("  header rows   : &1", iHeaderSkipped) SKIP
+    SUBSTITUTE("  headers found : &1", iHeaderSkipped) SKIP
     SUBSTITUTE("Existing rows   : &1", iExisting) SKIP
     SUBSTITUTE("New rows created: &1", iCreated) SKIP.
 END FINALLY.
