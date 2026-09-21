@@ -30,6 +30,7 @@ DEFINE VARIABLE iCreated        AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iHeaderSkipped  AS INTEGER   NO-UNDO.
 DEFINE VARIABLE lIsInteger      AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lCreated        AS LOGICAL   NO-UNDO.
+DEFINE VARIABLE lCreateStarted  AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lExisting       AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lNeedsRecheck   AS LOGICAL   NO-UNDO.
 
@@ -193,8 +194,12 @@ DO ON ERROR UNDO, THROW:
   REPEAT:
     IMPORT UNFORMATTED cLine NO-ERROR.
 
-    IF ERROR-STATUS:ERROR THEN
-      LEAVE.
+    IF ERROR-STATUS:ERROR THEN DO:
+      IF ERROR-STATUS:NUM-MESSAGES = 0 THEN
+        LEAVE.
+
+      UNDO, THROW NEW Progress.Lang.AppError(ERROR-STATUS:GET-MESSAGE(1), 0).
+    END.
 
     iLinesRead = iLinesRead + 1.
 
@@ -232,9 +237,10 @@ DO ON ERROR UNDO, THROW:
     END.
 
     ASSIGN
-      lCreated      = FALSE
-      lExisting     = FALSE
-      lNeedsRecheck = FALSE.
+      lCreated       = FALSE
+      lCreateStarted = FALSE
+      lExisting      = FALSE
+      lNeedsRecheck  = FALSE.
 
     DO TRANSACTION:
       FIND FIRST koder
@@ -250,6 +256,8 @@ DO ON ERROR UNDO, THROW:
         IF ERROR-STATUS:ERROR THEN
           lNeedsRecheck = TRUE.
         ELSE DO:
+          lCreateStarted = TRUE.
+
           ASSIGN
             koder.kodetype = "cobrand"
             koder.kodenr   = iCodeNr
@@ -257,14 +265,22 @@ DO ON ERROR UNDO, THROW:
 
           IF ERROR-STATUS:ERROR THEN DO:
             lNeedsRecheck = TRUE.
-            UNDO, LEAVE.
+            IF lCreateStarted
+            AND AVAILABLE koder THEN
+              DELETE koder NO-ERROR.
+
+            LEAVE.
           END.
 
           VALIDATE koder NO-ERROR.
 
           IF ERROR-STATUS:ERROR THEN DO:
             lNeedsRecheck = TRUE.
-            UNDO, LEAVE.
+            IF lCreateStarted
+            AND AVAILABLE koder THEN
+              DELETE koder NO-ERROR.
+
+            LEAVE.
           END.
 
           lCreated = TRUE.
