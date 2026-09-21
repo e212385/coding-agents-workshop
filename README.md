@@ -204,7 +204,8 @@ from an Excel-exported CSV.
 
 - Expected source data: column C contains the cobrand code to import
 - Supported delimiters: `,` and `;` (auto-detected per line)
-- Header handling: the first row is skipped when column C is not an integer
+- Header handling: the first row is treated as header/non-data and skipped
+  when column C is not an integer
 - Example invocation:
 
 ```abl

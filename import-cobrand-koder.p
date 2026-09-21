@@ -12,7 +12,8 @@ BLOCK-LEVEL ON ERROR UNDO, THROW.
     - If the input parameter is blank or ?, SESSION:PARAMETER is used.
     - If neither is set, the default file is sample-cobrand-koder.csv.
     - The procedure auto-detects "," versus ";" per line.
-    - The first row is treated as a header when column C is not an integer.
+    - The first row is treated as header/non-data and skipped when
+      column C is not an integer.
 ----------------------------------------------------------------------------*/
 
 DEFINE INPUT PARAMETER pcFile AS CHARACTER NO-UNDO.
@@ -29,6 +30,7 @@ DEFINE VARIABLE iCreated        AS INTEGER   NO-UNDO.
 DEFINE VARIABLE iHeaderSkipped  AS INTEGER   NO-UNDO.
 DEFINE VARIABLE lCreated        AS LOGICAL   NO-UNDO.
 DEFINE VARIABLE lExisting       AS LOGICAL   NO-UNDO.
+DEFINE VARIABLE lNeedsRecheck   AS LOGICAL   NO-UNDO.
 
 FUNCTION fCleanField RETURNS CHARACTER
   ( INPUT pcValue AS CHARACTER ):
@@ -237,8 +239,9 @@ DO ON ERROR UNDO, THROW:
     END.
 
     ASSIGN
-      lCreated  = FALSE
-      lExisting = FALSE.
+      lCreated      = FALSE
+      lExisting     = FALSE
+      lNeedsRecheck = FALSE.
 
     DO TRANSACTION:
       FIND FIRST koder
@@ -251,27 +254,32 @@ DO ON ERROR UNDO, THROW:
       ELSE DO:
         CREATE koder NO-ERROR.
 
-        IF NOT ERROR-STATUS:ERROR THEN DO:
+        IF ERROR-STATUS:ERROR THEN
+          lNeedsRecheck = TRUE.
+        ELSE DO:
           ASSIGN
             koder.kodetype = "cobrand"
             koder.kodenr   = iCodeNr
             NO-ERROR.
 
-          IF ERROR-STATUS:ERROR THEN
+          IF ERROR-STATUS:ERROR THEN DO:
+            lNeedsRecheck = TRUE.
             UNDO, LEAVE.
+          END.
 
           VALIDATE koder NO-ERROR.
 
-          IF ERROR-STATUS:ERROR THEN
+          IF ERROR-STATUS:ERROR THEN DO:
+            lNeedsRecheck = TRUE.
             UNDO, LEAVE.
+          END.
 
           lCreated = TRUE.
         END.
       END.
     END.
 
-    IF NOT lCreated
-    AND NOT lExisting THEN DO:
+    IF lNeedsRecheck THEN DO:
       FIND FIRST koder
            WHERE koder.kodetype = "cobrand"
              AND koder.kodenr   = iCodeNr
