@@ -18,6 +18,8 @@ BLOCK-LEVEL ON ERROR UNDO, THROW.
 
 DEFINE INPUT PARAMETER pcFile AS CHARACTER NO-UNDO.
 
+DEFINE BUFFER bLockKoder FOR koder.
+
 DEFINE VARIABLE cFile           AS CHARACTER NO-UNDO.
 DEFINE VARIABLE cLine           AS CHARACTER NO-UNDO.
 DEFINE VARIABLE cCodeValue      AS CHARACTER NO-UNDO.
@@ -191,15 +193,8 @@ PUT UNFORMATTED SUBSTITUTE("Reading cobrand import file: &1", cFile) SKIP.
 DO ON ERROR UNDO, THROW:
   INPUT FROM VALUE(cFile).
 
-  REPEAT:
-    IMPORT UNFORMATTED cLine NO-ERROR.
-
-    IF ERROR-STATUS:ERROR THEN DO:
-      IF ERROR-STATUS:NUM-MESSAGES = 0 THEN
-        LEAVE.
-
-      UNDO, THROW NEW Progress.Lang.AppError(ERROR-STATUS:GET-MESSAGE(1), 0).
-    END.
+  DO WHILE TRUE ON ENDKEY UNDO, LEAVE:
+    IMPORT UNFORMATTED cLine.
 
     iLinesRead = iLinesRead + 1.
 
@@ -243,6 +238,8 @@ DO ON ERROR UNDO, THROW:
       lNeedsRecheck  = FALSE.
 
     DO TRANSACTION:
+      FIND FIRST bLockKoder EXCLUSIVE-LOCK NO-ERROR.
+
       FIND FIRST koder
            WHERE koder.kodetype = "cobrand"
              AND koder.kodenr   = iCodeNr
