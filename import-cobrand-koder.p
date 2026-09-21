@@ -235,6 +235,17 @@ DO ON ERROR UNDO, THROW:
       lExisting      = FALSE
       lNeedsRecheck  = FALSE.
 
+    FIND FIRST koder
+         WHERE koder.kodetype = "cobrand"
+           AND koder.kodenr   = iCodeNr
+         NO-LOCK NO-ERROR.
+
+    IF AVAILABLE koder THEN DO:
+      iExisting = iExisting + 1.
+      PUT UNFORMATTED SUBSTITUTE("Cobrand koder &1 already exists.", iCodeNr) SKIP.
+      NEXT.
+    END.
+
     DO TRANSACTION:
       FIND FIRST koder
            WHERE koder.kodetype = "cobrand"
